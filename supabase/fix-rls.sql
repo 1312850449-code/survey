@@ -1,0 +1,10 @@
+DROP POLICY IF EXISTS "Allow anon insert" ON public.submissions;
+CREATE POLICY "Allow anon insert" ON public.submissions FOR INSERT TO anon WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow service role insert" ON public.submissions;
+CREATE POLICY "Allow service role insert" ON public.submissions FOR INSERT TO service_role WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow authenticated select" ON public.submissions;
+CREATE POLICY "Allow authenticated select" ON public.submissions FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated insert view" ON public.view_records;
+CREATE POLICY "Allow authenticated insert view" ON public.view_records FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow authenticated select view" ON public.view_records;
+CREATE POLICY "Allow authenticated select view" ON public.view_records FOR SELECT TO authenticated USING (true);
