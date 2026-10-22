@@ -36,11 +36,21 @@ export default function AdminDashboard({
   initialViewRecords: ViewRecord[];
   currentUser: CurrentUser;
 }) {
-  const [submissions] = useState<Submission[]>(initialSubmissions);
+  const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [viewRecords, setViewRecords] = useState<ViewRecord[]>(initialViewRecords);
   const [expanded, setExpanded] = useState<Record<string, ExpandedItem>>({});
   const [loadingView, setLoadingView] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(submissions.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedSubmissions = submissions.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,6 +118,46 @@ export default function AdminDashboard({
     },
     [expanded, viewRecords, currentUser]
   );
+
+  const handleDelete = async (submission: Submission) => {
+    if (!window.confirm("确定删除这条反馈记录吗？删除后不可恢复。")) return;
+
+    setDeletingId(submission.id);
+    try {
+      const accessToken = document.cookie
+        .split(";")
+        .find((c) => c.trim().startsWith("sb-access-token="))
+        ?.split("=")[1];
+
+      const res = await fetch("/api/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken || ""}`,
+        },
+        body: JSON.stringify({ id: submission.id }),
+      });
+
+      if (!res.ok) {
+        alert("删除失败，请稍后重试");
+        return;
+      }
+
+      setSubmissions((prev) => prev.filter((s) => s.id !== submission.id));
+      setViewRecords((prev) =>
+        prev.filter((v) => v.submission_id !== submission.id)
+      );
+      setExpanded((prev) => {
+        const next = { ...prev };
+        delete next[submission.id];
+        return next;
+      });
+    } catch {
+      alert("网络错误，请稍后重试");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleLogout = async () => {
     setLogoutLoading(true);
@@ -177,7 +227,7 @@ export default function AdminDashboard({
           </div>
         ) : (
           <div className="space-y-3">
-            {submissions.map((s) => {
+            {pagedSubmissions.map((s) => {
               const myViews = getMyViews(s.id);
               const allViews = getAllViews(s.id);
               const isExpanded = !!expanded[s.id];
@@ -272,6 +322,15 @@ export default function AdminDashboard({
                               {new Date(s.created_at).toLocaleString("zh-CN")}
                             </span>
                           </div>
+                          <div className="pt-1">
+                            <button
+                              onClick={() => handleDelete(s)}
+                              disabled={deletingId === s.id}
+                              className="px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {deletingId === s.id ? "删除中..." : "删除此反馈"}
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -314,6 +373,38 @@ export default function AdminDashboard({
                 </div>
               );
             })}
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                <button
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  上一页
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={`w-9 h-9 text-sm rounded-lg border transition ${
+                      p === currentPage
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "border-slate-300 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  下一页
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
