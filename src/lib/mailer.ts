@@ -91,10 +91,34 @@ export async function notifyAdmins(submission: Submission): Promise<void> {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"质量问题反馈" <${user}>`,
-    to: recipients.join(","),
-    subject: `【新反馈】${submission.time_location.slice(0, 40)}`,
-    html,
+  const subject = `【新反馈】${submission.time_location.slice(0, 40)}`;
+  const text = [
+    "收到一条新的质量问题反馈",
+    "",
+    `时间与地点：${submission.time_location}`,
+    `问题内容：${submission.problem_content}`,
+    `联系电话：${submission.phone || "未填写"}`,
+    `提交时间：${time}`,
+    "",
+    "请登录管理后台查看：https://survey-n91j.vercel.app/admin",
+  ].join("\n");
+
+  // 逐个收件人单独发送：多收件人一封容易被邮箱服务商判为群发垃圾邮件
+  const results = await Promise.allSettled(
+    recipients.map((email) =>
+      transporter.sendMail({
+        from: `"质量问题反馈" <${user}>`,
+        to: email,
+        subject,
+        text,
+        html,
+      })
+    )
+  );
+
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      console.error(`Send mail to ${recipients[i]} failed:`, r.reason);
+    }
   });
 }
