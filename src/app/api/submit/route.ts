@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { notifyAdmins } from "@/lib/mailer";
 
 export async function POST(req: Request) {
   try {
@@ -29,6 +30,17 @@ export async function POST(req: Request) {
     if (error) {
       console.error("Supabase insert error:", error);
       return NextResponse.json({ error: "保存失败" }, { status: 500 });
+    }
+
+    // 邮件提醒不阻塞提交：发送失败不影响用户看到成功提示
+    try {
+      await notifyAdmins({
+        time_location: time_location.trim(),
+        problem_content: problem_content.trim(),
+        phone: phone && phone.trim() ? phone.trim() : null,
+      });
+    } catch (mailErr) {
+      console.error("Notify admins error:", mailErr);
     }
 
     return NextResponse.json({ success: true });

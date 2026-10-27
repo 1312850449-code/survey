@@ -10,9 +10,10 @@
 - 提交后显示成功提示，支持继续提交
 
 ### 管理端 `/admin`
-- 邮箱密码登录（Supabase Auth）
-- 以"时间与地点"为标题逐条呈现所有提交
-- 点击任意一条展开详情（三字段完整内容 + 提交时间）
+- 邮箱密码登录（Supabase Auth），支持注册新管理员
+- **新反馈邮件提醒**：有人提交后自动发邮件给所有已注册管理员（新注册管理员自动加入收件人）
+- 以"时间与地点"为标题逐条呈现所有提交，每页 10 条分页
+- 点击任意一条展开详情（三字段完整内容 + 提交时间），可删除记录
 - 自动记录查看行为：
   - 每条数据显示 **已查看 / 未查看** 状态
   - 显示 **有多少位管理员查看过**
@@ -174,8 +175,13 @@ git push -u origin main
    NEXT_PUBLIC_SUPABASE_URL = https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1Ni...
    SUPABASE_SERVICE_ROLE_KEY = eyJhbGciOiJIUzI1Ni...
+   SMTP_HOST = smtp.qq.com
+   SMTP_PORT = 465
+   SMTP_USER = 你的发信邮箱（如 xxx@qq.com）
+   SMTP_PASS = 该邮箱的 SMTP 授权码（非登录密码）
    ```
    > 注意：`NEXT_PUBLIC_` 开头的会暴露在客户端代码中，不要把 service_role key 命名错了！
+   > SMTP 四个变量不配置时，提交仍正常保存，只是不发送邮件提醒。
 6. 点击 **Deploy**
 7. 等待部署完成（约 30 秒），会分配一个 `xxx.vercel.app` 域名
 
